@@ -1,103 +1,194 @@
-import Image from "next/image";
+"use client";
+import { useState, useEffect } from "react";
+import { Table, Button, Modal, Form, InputNumber, Input } from "antd";
+import CreateExpenseForm from "./components/CreateExpenseForm";
 
-export default function Home() {
+function Page() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTotalModalOpen, setIsTotalModalOpen] = useState(false);
+  const [dataSource, setDataSource] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [totalMoney, setTotalMoney] = useState(0);
+
+  const [expenseForm] = Form.useForm();
+  const [totalForm] = Form.useForm();
+
+  const showModal = () => setIsModalOpen(true);
+  const handleCancel = () => setIsModalOpen(false);
+  const showTotalModal = () => setIsTotalModalOpen(true);
+  const handleTotalCancel = () => setIsTotalModalOpen(false);
+
+  const handleOk = () => {
+    expenseForm.submit();
+  };
+
+
+  const handleTotalOk = () => {
+    totalForm.submit();
+  };
+
+  const handleFormFinish = (values) => {
+    const formattedValues = {
+      ...values,
+      date: values.date ? values.date.format("YYYY-MM-DD") : null,
+       receivedAmount: undefined,
+    };
+
+    const existingData = JSON.parse(localStorage.getItem("expenseData")) || [];
+    const updatedData = [...existingData, formattedValues];
+
+    localStorage.setItem("expenseData", JSON.stringify(updatedData));
+    setIsModalOpen(false);
+    expenseForm.resetFields();
+
+    const formatted = updatedData.map((item, index) => ({
+      ...item,
+      key: index,
+    }));
+
+    setDataSource(formatted);
+    setFilteredData(formatted);
+  };
+
+  const handleTableChange = (pagination, filters, sorter, extra) => {
+    setFilteredData(extra.currentDataSource);
+  };
+
+  const handleTotalFinish = (values) => {
+    const newTotal = Number(totalMoney) + Number(values.total);
+    localStorage.setItem("totalMoney", newTotal);
+    setTotalMoney(newTotal);
+    setIsTotalModalOpen(false);
+    totalForm.resetFields();
+
+    const newEntry = {
+    date: new Date().toISOString().slice(0, 10),
+    receivedAmount: Number(values.total),  
+    note: values.note,
+    key: Date.now(),
+  };
+    const existingData = JSON.parse(localStorage.getItem("expenseData")) || [];
+    const updatedData = [...existingData, newEntry];
+    localStorage.setItem("expenseData", JSON.stringify(updatedData));
+
+    const formatted = updatedData.map((item, index) => ({
+      ...item,
+      key: index,
+    }));
+    setDataSource(formatted);
+    setFilteredData(formatted);
+  };
+
+  useEffect(() => {
+    const data = JSON.parse(localStorage.getItem("expenseData")) || [];
+    const formatted = data.map((item, index) => ({
+      ...item,
+      key: index,
+    }));
+    setDataSource(formatted);
+    setFilteredData(formatted);
+
+    const storedTotal = localStorage.getItem("totalMoney");
+    setTotalMoney(Number(storedTotal) || 0);
+  }, []);
+
+  const calculateTotalExpense = (data) => {
+    return data.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  };
+
+  const totalSpent = calculateTotalExpense(filteredData);
+  const remainingMoney = totalMoney - totalSpent;
+
+  const columns = [
+    { title: "Date", dataIndex: "date", key: "date" },
+    { title: "Expense Name", dataIndex: "expenseName", key: "expenseName" },
+    { title: "Description", dataIndex: "description", key: "description" },
+    { title: "Amount", dataIndex: "amount", key: "amount" },
+    {
+  title: "Received Amount",
+  dataIndex: "receivedAmount",
+  key: "receivedAmount",},
+    {
+      title: "Payment Method",
+      dataIndex: "paymentMethod",
+      key: "paymentMethod",
+      filters: [
+        { text: "Cash", value: "Cash" },
+        { text: "UPI", value: "UPI" },
+        { text: "Card", value: "Card" },
+      ],
+      onFilter: (value, record) => record.paymentMethod === value,
+      // onFilter: (value, record) => console.log(value),
+      filterSearch: true,
+    },
+    { title: "Note", dataIndex: "note", key: "note" },
+  ];
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="p-10">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-5xl">Expense Tracker</h1>
+        <div className="space-x-2">
+          <Button onClick={showTotalModal} type="default">
+            Set Total Money
+          </Button>
+          <Button onClick={showModal} type="primary">
+            Enter Expense
+          </Button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+
+      {/* Expense Entry Modal */}
+      <Modal
+        title="Enter Expense"
+        open={isModalOpen}
+        onOk={handleOk}
+        onCancel={handleCancel}
+        okText="Save"
+      >
+        <CreateExpenseForm form={expenseForm} onFinish={handleFormFinish} />
+      </Modal>
+
+      {/* Total Money Modal */}
+      <Modal
+        title="Set Total Money"
+        open={isTotalModalOpen}
+        onOk={handleTotalOk}
+        onCancel={handleTotalCancel}
+        okText="Save"
+      >
+        <Form form={totalForm} onFinish={handleTotalFinish} layout="vertical">
+          <Form.Item
+            name="total"
+            label="Total Money (₹)"
+            rules={[{ required: true, message: "Please input total money!" }]}
+          >
+            <InputNumber style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item
+            name="note"
+            label="Note"
+          >
+            <Input style={{ width: "100%" }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <div className="text-right mt-4 space-y-1 text-lg font-semibold flex justify-between">
+        <div>Total Money: ₹{totalMoney}</div>
+        <div>Spent: ₹{totalSpent}</div>
+        <div>Remaining Money: ₹{remainingMoney >= 0 ? remainingMoney : 0}</div>
+      </div>
+
+      <Table
+        dataSource={filteredData}
+        columns={columns}
+        className="mt-6"
+        onChange={handleTableChange}
+        pagination={false}
+      />
     </div>
   );
 }
+
+export default Page;
