@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Table, Button, Modal, Form, InputNumber, Input } from "antd";
-import CreateExpenseForm from "./components/CreateExpenseForm";
+import CreateExpenseForm from "../components/CreateExpenseForm";
 
 function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
